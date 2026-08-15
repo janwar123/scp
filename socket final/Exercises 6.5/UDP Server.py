@@ -1,20 +1,28 @@
 import socket
 
-HOST="127.0.0.1"
-PORT=5000
+HOST = "127.0.0.1"
+PORT = 5000
 
-server=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-server.bind((HOST,PORT))
+server.bind((HOST, PORT))
 
-print("UDP Chat Server Running")
+print("UDP Server Started")
 
 while True:
 
-    data,address=server.recvfrom(1000)
+    try:
 
-    print("Client :",data.decode())
+        message, client_address = server.recvfrom(1000)
 
-    reply=input("You : ")
+        print("\nClient:", message.decode())
 
-    server.sendto(reply.encode(),address)
+        reply = input("Server: ")
+
+        server.sendto(reply.encode(), client_address)
+
+    except KeyboardInterrupt:
+        print("\nServer Closed")
+        break
+
+server.close()
