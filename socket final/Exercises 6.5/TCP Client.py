@@ -1,18 +1,25 @@
 import socket
 
-HOST="127.0.0.1"
-PORT=5000
+HOST = "127.0.0.1"
+PORT = 5000
 
-client=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-client.connect((HOST,PORT))
+client.connect((HOST, PORT))
 
 while True:
+    try:
 
-    msg=input("You : ")
+        message = input("Client: ")
 
-    client.send(msg.encode())
+        client.send(message.encode())
 
-    reply=client.recv(1024).decode()
+        reply = client.recv(1024).decode()
 
-    print("Server :",reply)
+        print("Server:", reply)
+
+    except KeyboardInterrupt:
+        print("\nClient Closed")
+        break
+
+client.close()
