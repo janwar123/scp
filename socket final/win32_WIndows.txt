@@ -1,0 +1,813 @@
+###############1.Connection
+
+#######tcp_server:
+
+import socket
+
+HOST = "127.0.0.1"
+PORT = 5001
+
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.bind((HOST, PORT))
+server.listen(1)
+
+print("Waiting...")
+
+client, addr = server.accept()
+
+file = open("received.txt", "wb")
+
+while True:
+
+    data = client.recv(100)
+
+    if not data:
+        break
+
+    file.write(data)
+
+    client.send(b"ACK")
+
+print("Successfully Recieved")
+file.close()
+
+client.close()
+
+
+#############tcp_Client:
+
+import socket
+
+HOST = "127.0.0.1"
+PORT = 5001
+
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client.connect((HOST, PORT))
+
+client.settimeout(2.0) 
+
+file = open("sample.txt", "rb")
+
+while True:
+    chunk = file.read(100)
+    if not chunk:
+        break
+
+    ack_received = False
+    while not ack_received:
+        try:
+            client.send(chunk)
+            
+            ack = client.recv(1024)
+            if ack == b"ACK":
+                print("ACK received for chunk!")
+                ack_received = True 
+                
+        except socket.timeout:
+            print("Timeout! Resending chunk...")
+
+file.close()
+client.close()
+
+
+
+#########UDP server:
+import socket
+
+HOST = "127.0.0.1"
+PORT = 5001
+
+server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+server.bind((HOST, PORT))
+print("Waiting...")
+
+file = open("received_udp.txt", "w")
+
+while True:
+    data, addr = server.recvfrom(1024)
+    text = data.decode()
+    
+    if text == "END":
+        break
+        
+    file.write(text)
+
+
+print("Successfully Recieved")
+file.close()
+server.close()
+
+
+
+
+
+#######UDP client:
+import socket
+
+HOST = "127.0.0.1"
+PORT = 5001
+
+client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
+
+file = open("sample.txt", "r")
+
+for line in file:
+    client.sendto(line.encode(), (HOST, PORT))
+
+client.sendto("END".encode(), (HOST, PORT))
+print("ACK received for chunk!")
+
+file.close()
+client.close()
+
+
+
+###############2. FIle Download to the server:
+
+#########Server:
+
+import socket
+import threading
+import time
+
+
+HOST = "127.0.0.1"
+PORT = 5000
+
+
+def send_file(client):
+
+    filename = client.recv(1024).decode()
+
+    try:
+        file = open(filename, "rb")
+
+        while True:
+
+            data = file.read(1000)
+
+            if not data:
+                break
+
+            client.send(data)
+
+            time.sleep(0.2)
+
+        file.close()
+
+    except:
+
+        client.send(b"File Not Found")
+
+    client.close()
+
+
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+server.bind((HOST, PORT))
+
+server.listen()
+
+print("Server Running...")
+
+
+while True:
+
+    client, addr = server.accept()
+
+    print("Connected:", addr)
+
+    thread = threading.Thread(target=send_file, args=(client,))
+
+    thread.start()
+
+
+
+#############CLient
+
+import socket
+
+HOST = "127.0.0.1"
+PORT = 5000
+
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+client.connect((HOST, PORT))
+
+filename = input("Enter file name: ")
+
+client.send(filename.encode())
+
+newfile = open("downloaded_" + filename, "wb")
+
+while True:
+
+    data = client.recv(1000)
+
+    if not data:
+        break
+
+    newfile.write(data)
+
+newfile.close()
+
+client.close()
+
+print("Download Complete")
+
+
+
+
+
+################ 3. Calculator:
+
+########### server:
+import socket
+
+HOST = "127.0.0.1"
+PORT = 5000
+
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+server.bind((HOST, PORT))
+
+server.listen()
+
+print("Server is Running...")
+
+client, addr = server.accept()
+
+print("Connected:", addr)
+
+data = client.recv(1024).decode()
+
+num1, num2, op = data.split(",")
+
+num1 = int(num1)
+num2 = int(num2)
+
+if op == "+":
+    result = num1 + num2
+
+elif op == "-":
+    result = num1 - num2
+
+elif op == "*":
+    result = num1 * num2
+
+elif op == "/":
+    if num2 != 0:
+        result = num1 / num2
+    else:
+        result = "Division by Zero"
+
+elif op == "%":
+    if num2 != 0:
+        result = num1 % num2
+    else:
+        result = "Division by Zero"
+
+else:
+    result = "Invalid Operator"
+
+client.send(str(result).encode())
+
+client.close()
+
+server.close()
+
+
+
+
+######### client:
+
+import socket
+
+HOST = "127.0.0.1"
+PORT = 5000
+
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+client.connect((HOST, PORT))
+
+num1 = input("Enter First Number : ")
+
+num2 = input("Enter Second Number : ")
+
+op = input("Enter Operator (+ - * / %) : ")
+
+message = num1 + "," + num2 + "," + op
+
+client.send(message.encode())
+
+result = client.recv(1024).decode()
+
+print("\nResult =", result)
+
+client.close()
+
+
+
+
+
+############## 4.Streaming
+
+
+#######Server:
+import socket
+import random
+
+HOST="127.0.0.1"
+PORT=5000
+
+server=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+
+server.bind((HOST,PORT))
+
+print("Streaming Server Running")
+
+filename,address=server.recvfrom(1024)
+
+filename=filename.decode()
+
+file=open(filename,"rb")
+
+while True:
+
+    size=random.randint(1000,2000)
+
+    data=file.read(size)
+
+    if not data:
+
+        server.sendto(b"END",address)
+
+        break
+
+    server.sendto(data,address)
+
+file.close()
+
+
+
+
+#########Client:
+import socket
+
+HOST="127.0.0.1"
+PORT=5000
+
+client=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+
+filename=input("Enter filename : ")
+
+client.sendto(filename.encode(),(HOST,PORT))
+
+file=open("received.mp4","wb")
+
+while True:
+
+    data,address=client.recvfrom(2048)
+
+    if data==b"END":
+
+        break
+
+    file.write(data)
+
+file.close()
+
+print("Download Complete")
+
+
+
+
+
+
+############## 5.Single Chatting:
+
+Connection Oriented- TCP
+##############TCP_Server:
+import socket
+
+HOST="127.0.0.1"
+PORT=5000
+
+server=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+
+server.bind((HOST,PORT))
+
+server.listen()
+
+print("Waiting...")
+
+client,address=server.accept()
+
+print("Connected")
+
+while True:
+
+    msg=client.recv(1024).decode()
+
+    print("Client :",msg)
+
+    reply=input("You : ")
+
+    client.send(reply.encode())
+
+
+
+
+###########TCP_Client:
+import socket
+
+HOST="127.0.0.1"
+PORT=5000
+
+client=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+
+client.connect((HOST,PORT))
+
+while True:
+
+    msg=input("You : ")
+
+    client.send(msg.encode())
+
+    reply=client.recv(1024).decode()
+
+    print("Server :",reply)
+
+
+
+Connectionless
+########## UDP_Server:
+import socket
+
+HOST="127.0.0.1"
+PORT=5000
+
+server=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+
+server.bind((HOST,PORT))
+
+print("UDP Chat Server Running")
+
+while True:
+
+    data,address=server.recvfrom(1000)
+
+    print("Client :",data.decode())
+
+    reply=input("You : ")
+
+    server.sendto(reply.encode(),address)
+
+
+
+
+
+
+
+############ UDP_CLient:
+import socket
+
+HOST="127.0.0.1"
+PORT=5000
+
+client=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+
+while True:
+
+    msg=input("You : ")
+
+    client.sendto(msg.encode(),(HOST,PORT))
+
+    reply,address=client.recvfrom(1000)
+
+    print("Server :",reply.decode())
+
+
+
+
+
+########6.Extended Chat:
+
+
+########Server:
+import socket
+import threading
+
+HOST = "127.0.0.1"
+PORT = 5000
+
+
+def chat(client):
+
+    while True:
+
+        try:
+
+            msg = client.recv(1024).decode()
+
+            if not msg:
+                break
+
+            print("\nClient :", msg)
+
+            reply = input("Reply : ")
+
+            client.send(reply.encode())
+
+        except:
+
+            break
+
+    client.close()
+
+
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+server.bind((HOST, PORT))
+
+server.listen()
+
+print("Server Running...")
+
+while True:
+
+    client, addr = server.accept()
+
+    print("Connected :", addr)
+
+    thread = threading.Thread(target=chat, args=(client,))
+
+    thread.start()
+
+
+
+
+
+#########CLient1:
+import socket
+
+HOST = "127.0.0.1"
+PORT = 5000
+
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+client.connect((HOST, PORT))
+
+while True:
+
+    msg = input("You : ")
+
+    client.send(msg.encode())
+
+    reply = client.recv(1024).decode()
+
+    print("Server :", reply)
+
+
+
+
+
+
+
+###########Client2:
+import socket
+
+HOST = "127.0.0.1"
+PORT = 5000
+
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+client.connect((HOST, PORT))
+
+while True:
+
+    msg = input("You : ")
+
+    client.send(msg.encode())
+
+    reply = client.recv(1024).decode()
+
+    print("Server :", reply)
+
+
+
+
+
+
+############## 7.Multicast Group Chat:
+
+import socket
+import struct
+import threading
+
+
+MULTICAST_GROUP = "224.1.1.1"
+PORT = 5000
+
+
+
+def receive_messages(sock):
+
+    while True:
+
+        data, address = sock.recvfrom(1024)
+
+        print(f"\n{address}: {data.decode()}")
+        print("You: ", end="", flush=True)
+
+
+def send_messages(sock):
+
+    while True:
+
+        message = input("You: ")
+
+        sock.sendto(
+            message.encode(),
+            (MULTICAST_GROUP, PORT)
+        )
+
+
+sock = socket.socket(
+    socket.AF_INET,
+    socket.SOCK_DGRAM,
+)
+
+sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+sock.bind(("", PORT))
+
+
+group = socket.inet_aton(MULTICAST_GROUP)
+
+membership = struct.pack(
+    "4sL",
+    group,
+    socket.INADDR_ANY
+)
+
+sock.setsockopt(
+    socket.IPPROTO_IP,
+    socket.IP_ADD_MEMBERSHIP,
+    membership
+)
+
+print("Joined multicast group.")
+print("Start chatting...\n")
+
+
+receive_thread = threading.Thread(
+    target=receive_messages,
+    args=(sock,),
+    daemon=True
+)
+
+receive_thread.start()
+
+
+try:
+
+    send_messages(sock)
+
+except KeyboardInterrupt:
+
+    print("\nChat closed.")
+
+    sock.close()
+
+
+
+############# Election:
+
+##########Server:
+import socket
+import threading
+
+HOST = "127.0.0.1"
+PORT = 5000
+
+TOTAL_CLIENTS = 5
+
+votes = []
+clients = []
+
+lock = threading.Lock()
+
+
+def handle_client(client):
+
+    vote = client.recv(1024).decode().upper()
+
+    with lock:
+        votes.append(vote)
+
+    print("Vote received:", vote)
+
+
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+server.bind((HOST, PORT))
+
+server.listen()
+
+print("Waiting for 5 clients...\n")
+
+threads = []
+
+while len(clients) < TOTAL_CLIENTS:
+
+    client, address = server.accept()
+
+    print("Connected:", address)
+
+    clients.append(client)
+
+    t = threading.Thread(target=handle_client, args=(client,))
+    t.start()
+
+    threads.append(t)
+
+
+for t in threads:
+    t.join()
+
+
+countA = votes.count("A")
+countB = votes.count("B")
+
+if countA > countB:
+    result = f"""
+Election Result
+
+Candidate A : {countA}
+Candidate B : {countB}
+
+Winner : Candidate A
+"""
+
+elif countB > countA:
+    result = f"""
+Election Result
+
+Candidate A : {countA}
+Candidate B : {countB}
+
+Winner : Candidate B
+"""
+
+else:
+    result = f"""
+Election Result
+
+Candidate A : {countA}
+Candidate B : {countB}
+
+Election Draw
+"""
+
+
+print(result)
+
+for client in clients:
+
+    client.sendall(result.encode())
+
+    client.close()
+
+server.close()
+
+
+
+
+###########CLient:
+import socket
+
+HOST = "127.0.0.1"
+PORT = 5000
+
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+client.connect((HOST, PORT))
+
+while True:
+
+    vote = input("Cast Vote (A/B): ").upper()
+
+    if vote in ("A", "B"):
+        break
+
+    print("Invalid vote.")
+
+client.sendall(vote.encode())
+
+result = client.recv(1024).decode()
+
+print("\n")
+print(result)
+
+client.close()
